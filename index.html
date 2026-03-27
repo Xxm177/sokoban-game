@@ -97,12 +97,58 @@
             color: #666;
         }
 
+        .mobile-controls {
+            display: none;
+            margin: 20px auto;
+            max-width: 250px;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(3, 70px);
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .dpad-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .dpad-btn:active {
+            background: #5568d3;
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-center { grid-column: 2; grid-row: 2; background: #f8f9fa; cursor: default; }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+
         @media (max-width: 600px) {
             .game-container {
                 padding: 15px;
             }
             h1 {
                 font-size: 1.5em;
+            }
+            .mobile-controls {
+                display: block;
+            }
+            .instructions {
+                font-size: 0.9em;
             }
         }
     </style>
@@ -118,6 +164,16 @@
 
         <canvas id="gameCanvas"></canvas>
 
+        <div class="mobile-controls">
+            <div class="dpad">
+                <button class="dpad-btn dpad-up" onclick="game.move(0, -1)">↑</button>
+                <button class="dpad-btn dpad-left" onclick="game.move(-1, 0)">←</button>
+                <div class="dpad-center"></div>
+                <button class="dpad-btn dpad-right" onclick="game.move(1, 0)">→</button>
+                <button class="dpad-btn dpad-down" onclick="game.move(0, 1)">↓</button>
+            </div>
+        </div>
+
         <div class="controls">
             <button class="btn" onclick="game.resetLevel()">🔄 重置关卡</button>
             <button class="btn" onclick="game.prevLevel()">⬅️ 上一关</button>
@@ -126,7 +182,8 @@
 
         <div class="instructions">
             <p>🎯 <strong>游戏目标：</strong>把所有箱子推到目标点上</p>
-            <p>⌨️ <strong>操作方式：</strong>使用方向键 ↑↓←→ 移动</p>
+            <p>⌨️ <strong>电脑操作：</strong>使用方向键 ↑↓←→ 移动</p>
+            <p>📱 <strong>手机操作：</strong>点击屏幕上的方向按钮</p>
             <p>💡 <strong>提示：</strong>箱子只能推不能拉，小心别推到角落！</p>
         </div>
     </div>
