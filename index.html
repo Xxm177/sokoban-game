@@ -98,9 +98,15 @@
         }
 
         .mobile-controls {
-            display: none;
+            display: block;
             margin: 20px auto;
             max-width: 250px;
+        }
+
+        @media (min-width: 1024px) {
+            .mobile-controls {
+                display: none;
+            }
         }
 
         .dpad {
