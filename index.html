@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推箱子游戏 - Sokoban</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 700px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .info-item {
+            font-size: 1.1em;
+            color: #333;
+            font-weight: bold;
+        }
+
+        #gameCanvas {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto 20px;
+            background: #f5deb3;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .instructions p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .game-container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 推箱子游戏</h1>
+
+        <div class="info-bar">
+            <div class="info-item">关卡: <span id="levelDisplay">1/4</span></div>
+            <div class="info-item">移动: <span id="movesDisplay">0</span></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="controls">
+            <button class="btn" onclick="game.resetLevel()">🔄 重置关卡</button>
+            <button class="btn" onclick="game.prevLevel()">⬅️ 上一关</button>
+            <button class="btn" onclick="game.nextLevel()">➡️ 下一关</button>
+        </div>
+
+        <div class="instructions">
+            <p>🎯 <strong>游戏目标：</strong>把所有箱子推到目标点上</p>
+            <p>⌨️ <strong>操作方式：</strong>使用方向键 ↑↓←→ 移动</p>
+            <p>💡 <strong>提示：</strong>箱子只能推不能拉，小心别推到角落！</p>
+        </div>
+    </div>
+
+    <script>
+const TILE = 50;
+const LEVELS = [
+    ["########","#      #","#  $.  #","#  @   #","#      #","########"],
+    ["##########","#        #","# $  $.  #","# .  @   #","#        #","##########"],
+    ["##########","#   #    #","# $ . $  #","#   @  . #","#  .  $  #","#        #","##########"],
+    ["############","#          #","# $  $  $  #","# .  .  .  #","#    @     #","#          #","############"],
+];
+
+class Sokoban {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.currentLevel = 0;
+        this.loadLevel();
+        document.addEventListener('keydown', e => this.handleKey(e));
+    }
+
+    loadLevel() {
+        this.level = LEVELS[this.currentLevel].map(row => row.split(''));
+        this.moves = 0;
+        this.playerPos = this.findPlayer();
+        const cols = Math.max(...this.level.map(r => r.length));
+        this.canvas.width = cols * TILE;
+        this.canvas.height = this.level.length * TILE;
+        this.updateInfo();
+        this.draw();
+    }
+
+    findPlayer() {
+        for (let y = 0; y < this.level.length; y++)
+            for (let x = 0; x < this.level[y].length; x++)
+                if ('@+'.includes(this.level[y][x])) return {x, y};
+        return {x:0, y:0};
+    }
+
+    move(dx, dy) {
+        const {x, y} = this.playerPos;
+        const nx = x + dx, ny = y + dy;
+        if (ny < 0 || ny >= this.level.length || nx < 0 || nx >= this.level[ny].length) return;
+        const target = this.level[ny][nx];
+        if (target === '#') return;
+
+        if ('$*'.includes(target)) {
+            const bx = nx + dx, by = ny + dy;
+            if (by < 0 || by >= this.level.length || bx < 0 || bx >= this.level[by].length) return;
+            const bt = this.level[by][bx];
+            if ('#$*'.includes(bt)) return;
+            this.level[by][bx] = bt === '.' ? '*' : '$';
+            this.level[ny][nx] = target === '*' ? '.' : ' ';
+        }
+
+        const cur = this.level[y][x];
+        this.level[y][x] = cur === '+' ? '.' : ' ';
+        this.level[ny][nx] = this.level[ny][nx] === '.' ? '+' : '@';
+        this.playerPos = {x: nx, y: ny};
+        this.moves++;
+        this.updateInfo();
+        this.draw();
+
+        if (this.checkWin()) {
+            setTimeout(() => {
+                alert(`🎉 恭喜完成第 ${this.currentLevel + 1} 关！共移动 ${this.moves} 步`);
+                this.currentLevel = (this.currentLevel + 1) % LEVELS.length;
+                this.loadLevel();
+            }, 100);
+        }
+    }
+
+    checkWin() {
+        return !this.level.some(row => row.includes('$'));
+    }
+
+    handleKey(e) {
+        const map = {ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0]};
+        if (map[e.key]) { e.preventDefault(); this.move(...map[e.key]); }
+        if (e.key === 'r' || e.key === 'R') this.resetLevel();
+    }
+
+    resetLevel() { this.loadLevel(); }
+    prevLevel() { this.currentLevel = (this.currentLevel - 1 + LEVELS.length) % LEVELS.length; this.loadLevel(); }
+    nextLevel() { this.currentLevel = (this.currentLevel + 1) % LEVELS.length; this.loadLevel(); }
+
+    updateInfo() {
+        document.getElementById('levelDisplay').textContent = `${this.currentLevel + 1}/${LEVELS.length}`;
+        document.getElementById('movesDisplay').textContent = this.moves;
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        const T = TILE;
+
+        for (let y = 0; y < this.level.length; y++) {
+            for (let x = 0; x < this.level[y].length; x++) {
+                const cell = this.level[y][x];
+                const x1 = x * T, y1 = y * T;
+
+                // 地板
+                ctx.fillStyle = cell === '#' ? '#444' : '#f5deb3';
+                ctx.fillRect(x1, y1, T, T);
+                ctx.strokeStyle = cell === '#' ? '#333' : '#deb887';
+                ctx.strokeRect(x1, y1, T, T);
+
+                if (cell === '#') {
+                    ctx.fillStyle = '#555';
+                    for (let i = 0; i < T; i += 12) {
+                        ctx.fillRect(x1, y1 + i, T, 1);
+                    }
+                }
+
+                // 目标点
+                if ('.+*'.includes(cell)) {
+                    ctx.fillStyle = '#90ee90';
+                    ctx.beginPath();
+                    ctx.arc(x1 + T/2, y1 + T/2, T/4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#228b22';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+
+                // 箱子
+                if ('$*'.includes(cell)) {
+                    ctx.fillStyle = cell === '*' ? '#ffd700' : '#8b4513';
+                    ctx.fillRect(x1 + 6, y1 + 6, T - 12, T - 12);
+                    ctx.strokeStyle = cell === '*' ? '#ffa500' : '#5c2a00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x1 + 6, y1 + 6, T - 12, T - 12);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = cell === '*' ? '#ffec8b' : '#a0522d';
+                    ctx.beginPath();
+                    ctx.moveTo(x1 + 6, y1 + 6); ctx.lineTo(x1 + T - 6, y1 + T - 6);
+                    ctx.moveTo(x1 + T - 6, y1 + 6); ctx.lineTo(x1 + 6, y1 + T - 6);
+                    ctx.stroke();
+                }
+
+                // 玩家
+                if ('@+'.includes(cell)) {
+                    // 身体
+                    ctx.fillStyle = '#6495ed';
+                    ctx.fillRect(x1 + 12, y1 + 22, T - 24, T - 28);
+                    // 头
+                    ctx.fillStyle = '#fdbcb4';
+                    ctx.beginPath();
+                    ctx.arc(x1 + T/2, y1 + 16, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#8b4513';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+            }
+        }
+    }
+}
+
+const game = new Sokoban();
+    </script>
+</body>
+</html>
