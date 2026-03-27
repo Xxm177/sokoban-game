@@ -20,7 +20,7 @@
 
 ## 🚀 在线游玩
 
-访问：[https://你的用户名.github.io/sokoban-game](https://xxm.github.io/sokoban-game)
+访问：[https://xxm177.github.io/sokoban-game](https://xxm177.github.io/sokoban-game)
 
 ## 📦 本地运行
 
